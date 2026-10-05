@@ -30,7 +30,14 @@ result = subprocess.run(
 )
 paths = [Path(value) for value in result.stdout.splitlines() if value]
 email_pattern = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
-url_pattern = re.compile(r"\b(?:[A-Za-z][A-Za-z0-9+.-]*://)?(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?::\d+)?(?:/[^\s<>\"'`]*)?", re.IGNORECASE)
+url_patterns = [
+    re.compile(r"\b[A-Za-z][A-Za-z0-9+.-]*://[^\s<>\"'`]+", re.IGNORECASE),
+    re.compile(r"\bwww\.[^\s<>\"'`]+", re.IGNORECASE),
+    re.compile(
+        r"\b(?:[A-Za-z0-9-]+\.)+(?:com|org|net|edu|gov|mil|int|biz|info|name|pro|aero|coop|museum|mobi|travel|jobs|cat|asia|tel|xxx|post|uk|us|ca|au|nz|de|fr|jp|cn|in|ie|nl|es|it|se|no|fi|ch|be|dk|sg|hk|za|br|mx|ru|io|ai|app|dev|cloud|tech|online|site|website|shop|store|xyz|top|world|space|click|link|live|work|design|agency|solutions|digital|consulting|email|me|co|tv|gg|fm|ly|sh|to|cc|example|test|invalid)(?::\d+)?(?:/[^\s<>\"'`]*)?",
+        re.IGNORECASE,
+    ),
+]
 forbidden_term = re.compile(r"\b" + chr(83) + r"ME\b")
 forbidden_chars = (chr(0x2014), chr(0x2013))
 allowed_hosts = {"github.com", "docs.github.com"}
@@ -43,12 +50,13 @@ for path in paths:
     for line_number, line in enumerate(content, start=1):
         matched = bool(email_pattern.search(line) or forbidden_term.search(line))
         matched = matched or any(character in line for character in forbidden_chars)
-        for candidate in url_pattern.findall(line):
-            normalized = candidate.rstrip(".,);:!?}")
-            parsed = urlsplit(normalized if "://" in normalized else "//" + normalized)
-            host = (parsed.hostname or "").lower()
-            if host not in allowed_hosts:
-                matched = True
+        for pattern in url_patterns:
+            for candidate in pattern.findall(line):
+                normalized = candidate.rstrip(".,);:!?}")
+                parsed = urlsplit(normalized if "://" in normalized else "//" + normalized)
+                host = (parsed.hostname or "").lower()
+                if host not in allowed_hosts:
+                    matched = True
         if not matched:
             matched = any(entry in line for entry in deny_entries)
         if matched:
