@@ -36,7 +36,7 @@ url_patterns = [
     re.compile(r"\b[A-Za-z][A-Za-z0-9+.-]*" + re.escape(scheme_marker) + r"[^\s<>\"'`]+", re.IGNORECASE),
     re.compile(r"\b" + web_prefix + r"[^\s<>\"'`]+", re.IGNORECASE),
     re.compile(
-        r"\b(?:[A-Za-z0-9-]+\.)+(?:com|org|net|edu|gov|mil|int|biz|info|name|pro|aero|coop|museum|mobi|travel|jobs|cat|asia|tel|xxx|post|uk|us|ca|au|nz|de|fr|jp|cn|in|ie|nl|es|it|se|no|fi|ch|be|dk|sg|hk|za|br|mx|ru|io|ai|app|dev|cloud|tech|online|site|website|shop|store|xyz|top|world|space|click|link|live|work|design|agency|solutions|digital|consulting|email|me|co|tv|gg|fm|ly|sh|to|cc|example|test|invalid)(?::\d+)?(?:/[^\s<>\"'`]*)?",
+        r"\b(?:[A-Za-z0-9-]+\.)+(?:com|org|net|edu|gov|mil|int|biz|info|name|pro|aero|coop|museum|mobi|travel|jobs|cat|asia|tel|xxx|post|uk|us|ca|au|nz|de|fr|jp|cn|in|ie|nl|es|it|se|no|fi|ch|be|dk|sg|hk|za|br|mx|ru|io|ai|app|dev|cloud|tech|online|site|website|shop|store|xyz|top|world|space|click|link|live|work|design|agency|solutions|digital|consulting|email|me|co|tv|gg|fm|ly|sh|to|cc|example|test|invalid)(?![A-Za-z0-9-])(?::\d+)?(?:/[^\s<>\"'`]*)?",
         re.IGNORECASE,
     ),
 ]
