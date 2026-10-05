@@ -30,7 +30,7 @@ result = subprocess.run(
 )
 paths = [Path(value) for value in result.stdout.splitlines() if value]
 email_pattern = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
-url_pattern = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
+url_pattern = re.compile(r"\b(?:[A-Za-z][A-Za-z0-9+.-]*://)?(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?::\d+)?(?:/[^\s<>\"'`]*)?", re.IGNORECASE)
 forbidden_term = re.compile(r"\b" + chr(83) + r"ME\b")
 forbidden_chars = (chr(0x2014), chr(0x2013))
 allowed_hosts = {"github.com", "docs.github.com"}
@@ -44,7 +44,9 @@ for path in paths:
         matched = bool(email_pattern.search(line) or forbidden_term.search(line))
         matched = matched or any(character in line for character in forbidden_chars)
         for candidate in url_pattern.findall(line):
-            host = (urlsplit(candidate.rstrip(".,);:!?}")).hostname or "").lower()
+            normalized = candidate.rstrip(".,);:!?}")
+            parsed = urlsplit(normalized if "://" in normalized else "//" + normalized)
+            host = (parsed.hostname or "").lower()
             if host not in allowed_hosts:
                 matched = True
         if not matched:
