@@ -1,0 +1,21 @@
+name: public-content-guard
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+permissions:
+  contents: read
+jobs:
+  public-content-guard:
+    name: public-content-guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request content
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUBLIC_DENY_LIST: ${{ secrets.PUBLIC_DENY_LIST }}
+        run: python3 scripts/public-content-guard.py

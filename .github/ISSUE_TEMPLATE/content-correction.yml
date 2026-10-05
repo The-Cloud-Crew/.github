@@ -1,0 +1,19 @@
+name: Content correction
+description: Report a factual or editorial correction.
+title: "Content correction: "
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: Location
+      description: Identify the file and section.
+      placeholder: File and heading
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Correction
+      description: Describe the correction and its source.
+    validations:
+      required: true
