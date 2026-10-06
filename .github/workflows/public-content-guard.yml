@@ -1,7 +1,7 @@
 name: public-content-guard
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+    types: [opened, reopened, synchronize, ready_for_review, edited]
 permissions:
   contents: read
 jobs:
@@ -10,12 +10,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out pull request content
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - name: Scan changed files
+          persist-credentials: false
+      - name: Load guard and run self-test
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # PRs that change or delete the guard are judged by the base commit copy.
+          if git cat-file -e "$BASE_SHA:scripts/public-content-guard.py" 2>/dev/null; then
+            git show "$BASE_SHA:scripts/public-content-guard.py" > "$RUNNER_TEMP/public-content-guard.py"
+            echo "Running guard copy from base commit $BASE_SHA"
+          else
+            cp scripts/public-content-guard.py "$RUNNER_TEMP/public-content-guard.py"
+            echo "Running bootstrap guard copy from pull request content"
+          fi
+          python3 -I scripts/public-content-guard-test.py "$RUNNER_TEMP/public-content-guard.py"
+      - name: Scan changed files and public pull request text
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
           PUBLIC_DENY_LIST: ${{ secrets.PUBLIC_DENY_LIST }}
-        run: python3 scripts/public-content-guard.py
+        run: python3 -I "$RUNNER_TEMP/public-content-guard.py"
+        # Fork PRs receive no secrets, so the guard intentionally fails closed.
