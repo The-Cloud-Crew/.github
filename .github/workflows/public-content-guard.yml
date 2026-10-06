@@ -14,19 +14,24 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Load guard and run self-test
+      - name: Load guard for scan
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # PRs that change or delete the guard are judged by the base commit copy.
+          # The scan uses the base copy; the separate self-test exercises the PR copy without a secret.
           if git cat-file -e "$BASE_SHA:scripts/public-content-guard.py" 2>/dev/null; then
             git show "$BASE_SHA:scripts/public-content-guard.py" > "$RUNNER_TEMP/public-content-guard.py"
-            echo "Running guard copy from base commit $BASE_SHA"
+            echo "GUARD_SOURCE=base commit $BASE_SHA" >> "$GITHUB_ENV"
+            echo "Loaded guard copy from base commit $BASE_SHA for scan"
           else
             cp scripts/public-content-guard.py "$RUNNER_TEMP/public-content-guard.py"
-            echo "Running bootstrap guard copy from pull request content"
+            echo "GUARD_SOURCE=bootstrap copy from pull request content" >> "$GITHUB_ENV"
+            echo "Loaded bootstrap guard copy from pull request content for scan"
           fi
-          python3 -I scripts/public-content-guard-test.py "$RUNNER_TEMP/public-content-guard.py"
+      - name: Self-test pull request guard
+        run: |
+          echo "Running self-test against pull request guard copy"
+          python3 -I scripts/public-content-guard-test.py scripts/public-content-guard.py
       - name: Scan changed files and public pull request text
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -34,5 +39,7 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PUBLIC_DENY_LIST: ${{ secrets.PUBLIC_DENY_LIST }}
-        run: python3 -I "$RUNNER_TEMP/public-content-guard.py"
+        run: |
+          echo "Running scan with $GUARD_SOURCE"
+          python3 -I "$RUNNER_TEMP/public-content-guard.py"
         # Fork PRs receive no secrets, so the guard intentionally fails closed.
