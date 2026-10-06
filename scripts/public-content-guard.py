@@ -15,6 +15,23 @@ def deny_entries_from(value):
     return [entry.strip().casefold() for entry in value.splitlines() if entry.strip()]
 
 
+def normalize_deny_text(value):
+    folded = value.casefold()
+    return re.sub(r"[\s_-]+", " ", folded).strip()
+
+
+def deny_matches(text, deny_entries):
+    normalized_text = normalize_deny_text(text)
+    for entry in deny_entries:
+        normalized_entry = normalize_deny_text(entry)
+        if not normalized_entry:
+            continue
+        pattern = r"(?<!\w)" + re.escape(normalized_entry) + r"(?!\w)"
+        if re.search(pattern, normalized_text):
+            return True
+    return False
+
+
 def line_reasons(line, deny_entries):
     reasons = set()
     email_pattern = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])")
@@ -44,8 +61,7 @@ def line_reasons(line, deny_entries):
             host = (parsed.hostname or "").lower()
             if host not in allowed_hosts:
                 reasons.add("URL")
-    folded_line = line.casefold()
-    if any(entry in folded_line for entry in deny_entries):
+    if deny_matches(line, deny_entries):
         reasons.add("deny entry")
     return reasons
 
@@ -134,7 +150,7 @@ def main():
         short_id = commit_id[:7]
         if not email_is_noreply(author_email) or not email_is_noreply(committer_email):
             violations.append((f"commit {short_id}", "non-noreply identity"))
-        if any(entry in author_name.casefold() or entry in committer_name.casefold() for entry in deny_entries):
+        if deny_matches(author_name, deny_entries) or deny_matches(committer_name, deny_entries):
             violations.append((f"commit {short_id}", "deny entry in author or committer name"))
         message = git_output(["git", "show", "-s", "--format=%B", commit_id]).decode("utf-8", errors="replace")
         if text_is_forbidden(message, deny_entries):

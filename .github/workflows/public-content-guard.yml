@@ -18,7 +18,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          # The scan uses the base copy; the separate self-test exercises the PR copy without a secret.
+          # Trust the base copy for scanning; the self-test separately exercises the PR copy and receives no secret.
           if git cat-file -e "$BASE_SHA:scripts/public-content-guard.py" 2>/dev/null; then
             git show "$BASE_SHA:scripts/public-content-guard.py" > "$RUNNER_TEMP/public-content-guard.py"
             echo "GUARD_SOURCE=base commit $BASE_SHA" >> "$GITHUB_ENV"

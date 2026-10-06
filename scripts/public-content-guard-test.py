@@ -60,7 +60,11 @@ def invoke_guard(guard, repo, base, head, deny, title="safe", body="safe"):
 
 def main():
     guard = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).with_name("public-content-guard.py")).resolve()
-    deny = "".join(("Acme", " ", "Bakery"))
+    acme_part = "".join(chr(value) for value in (97, 99, 109, 101))
+    bakery_part = "".join(chr(value) for value in (98, 97, 107, 101, 114, 121))
+    deny = "-".join((acme_part, bakery_part))
+    spaced_variant = " ".join((acme_part.capitalize(), bakery_part.capitalize()))
+    underscore_variant = "_".join((acme_part, bakery_part))
     mixed_case = deny.swapcase()
     email = "".join(("guard", "@", "github", ".", "com"))
     url = "".join(("https", ":", "/", "/", "not-allowlisted", ".", "example", "/guide"))
@@ -71,8 +75,10 @@ def main():
         repo = Path(temp)
         base = initialize_repo(repo, clean_email)
         (repo / "case.txt").write_text(mixed_case + "\n", encoding="utf-8")
-        (repo / (deny + " handover.md")).write_text("safe content\n", encoding="utf-8")
-        (repo / "binary.dat").write_bytes(b"\xff" + deny.encode("utf-8"))
+        (repo / (spaced_variant + " handover.md")).write_text("safe content\n", encoding="utf-8")
+        (repo / "space-variant.txt").write_text(spaced_variant + "\n", encoding="utf-8")
+        (repo / "underscore-variant.txt").write_text(underscore_variant + "\n", encoding="utf-8")
+        (repo / "binary.dat").write_bytes(b"\xff" + spaced_variant.encode("utf-8"))
         (repo / "email.txt").write_text(email + "\n", encoding="utf-8")
         (repo / "url.txt").write_text(url + "\n", encoding="utf-8")
         run(["git", "add", "-A"], repo)
@@ -87,10 +93,12 @@ def main():
         invalid_identity_commit = commit(repo, "add identity fixture", "Guard Self Test", rejected_email, "GitHub", clean_email)
         head = run(["git", "rev-parse", "HEAD"], repo).stdout.strip()
 
-        result = invoke_guard(guard, repo, base, head, deny, mixed_case, deny)
+        result = invoke_guard(guard, repo, base, head, deny, spaced_variant, underscore_variant)
         output = result.stdout + result.stderr
         expected = [
             "case.txt:1: disallowed content",
+            "space-variant.txt:1: disallowed content",
+            "underscore-variant.txt:1: disallowed content",
             "changed path 1:1: path contains deny entry",
             "binary.dat: non-text file not permitted",
             "email.txt:1: disallowed content",
@@ -112,7 +120,23 @@ def main():
         if deny.casefold() in output.casefold() or email in output or url in output or rejected_email in output:
             print("Self-test failed because the guard output exposed matched values.")
             raise SystemExit(1)
-        print("Negative cases passed: case-insensitive deny entry, file path, non-text file, PR title and body, commit message, email, non-allowlisted URL, non-noreply identity, and deny entry in author name.")
+        print("Negative cases passed: separator and case normalization, file path, non-text file, PR title and body, commit message, email, non-allowlisted URL, non-noreply identity, and deny entry in author name.")
+
+    with tempfile.TemporaryDirectory(prefix="public-content-guard-boundary-test-") as temp:
+        repo = Path(temp)
+        base = initialize_repo(repo, clean_email)
+        word = "".join(chr(value) for value in (118, 105, 115, 97))
+        (repo / "one.txt").write_text(word.capitalize() + "\n", encoding="utf-8")
+        (repo / "two.txt").write_text("ad" + word + "ble\n", encoding="utf-8")
+        run(["git", "add", "-A"], repo)
+        commit(repo, "check word boundary", "Guard Self Test", clean_email)
+        head = run(["git", "rev-parse", "HEAD"], repo).stdout.strip()
+        result = invoke_guard(guard, repo, base, head, word)
+        output = result.stdout + result.stderr
+        if result.returncode != 1 or "one.txt:1: disallowed content" not in output or "two.txt" in output:
+            print("Self-test failed: whole-word matching did not distinguish the two boundary cases.")
+            raise SystemExit(1)
+        print("Word-boundary cases passed: a word was caught and its embedded form was allowed.")
 
     with tempfile.TemporaryDirectory(prefix="public-content-guard-shell-test-") as temp:
         repo = Path(temp)
