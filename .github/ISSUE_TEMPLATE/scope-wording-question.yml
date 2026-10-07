@@ -1,0 +1,18 @@
+name: Scope or wording question
+description: Ask about the scope or wording of a solution pack.
+title: "Scope or wording question: "
+body:
+  - type: input
+    id: pack
+    attributes:
+      label: Pack
+      description: Name the affected solution pack.
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Identify the relevant wording and explain what is unclear.
+    validations:
+      required: true

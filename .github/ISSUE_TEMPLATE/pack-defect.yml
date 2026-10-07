@@ -1,0 +1,25 @@
+name: Defect in a pack
+description: Report a broken or inconsistent pack element.
+title: "Pack defect: "
+body:
+  - type: input
+    id: pack
+    attributes:
+      label: Pack
+      description: Name the affected solution pack.
+    validations:
+      required: true
+  - type: textarea
+    id: defect
+    attributes:
+      label: Defect
+      description: Describe the expected and actual result.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: List the steps needed to reproduce the defect.
+    validations:
+      required: true
